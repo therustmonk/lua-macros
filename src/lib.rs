@@ -44,6 +44,16 @@ macro_rules! ipairs {
     }};
 }
 
+/// ```rust
+/// ensure_types!(state, is_number, is_bool, is_fn);
+/// ```
+#[macro_export]
+macro_rules! ensure_types {
+    ($state:ident, $($check:ident),+) => {
+        let names = [$(stringify!($check),)+];
+    };
+}
+
 #[macro_export]
 macro_rules! ensure_table {
     ($state:ident) => {
@@ -53,9 +63,12 @@ macro_rules! ensure_table {
     };
 }
 
+/// ```rust
+/// convert_table!(state, Index(1): String, Field("value"): Number);
+/// ```
 #[macro_export]
 macro_rules! convert_table {
-    ($state:ident, $($tp:ident ( $idx:expr ) => $conv:ident),+) => {{
+    ($state:ident, $($tp:ident ( $idx:expr ) : $from:ty),+) => {{
         // TODO Insert auto_cleanup
         auto_cleanup!($state, {
             let top = $state.get_top();
@@ -67,16 +80,19 @@ macro_rules! convert_table {
                     $state.arg_error(1, &msg);
                 }
             })+
-            let result = convert_arguments!($state, $($conv),+);
+            let result = convert_arguments!($state, $($from),+);
             result
         })
     }};
 }
 
+/// ```rust
+/// convert_arguments!(state, Number, String);
+/// ```
 #[macro_export]
 macro_rules! convert_arguments {
-    ($state:ident, $($conv:ident),+) => {{
-        let names = [$(stringify!($conv),)*];
+    ($state:ident, $($from:ty),+) => {{
+        let names = [$(stringify!($from),)+];
         auto_cleanup!($state, {
             let top = $state.get_top() - names.len() as Index;
             if top < 0 {
@@ -88,8 +104,8 @@ macro_rules! convert_arguments {
             let result = ($({
                 position += 1;
                 let opt = {
-                    $state.$conv(top + position)
-                        .map(|v| v.to_owned())
+                    $state.to_type(top + position)
+                        .map(|v: $from| v.to_owned())
                 };
                 match opt {
                     Some(v) => v,
@@ -100,7 +116,7 @@ macro_rules! convert_arguments {
                         $state.arg_error(position, &msg);
                     },
                 }
-            }),+);
+            },)+);
             result
         })
     }};
