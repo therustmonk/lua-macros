@@ -1,0 +1,7 @@
+[package]
+name = "lua-macros"
+version = "0.0.1"
+authors = ["Denis Kolodin <deniskolodin@gmail.com>"]
+
+[dependencies]
+lua = { git = "https://github.com/jcmoyer/rust-lua53" }
