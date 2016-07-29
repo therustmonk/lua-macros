@@ -105,7 +105,7 @@ macro_rules! convert_arguments {
                 position += 1;
                 let opt = {
                     $state.to_type(top + position)
-                        .map(|v: $from| v.to_owned())
+                        .map(|v: $from| v)
                 };
                 match opt {
                     Some(v) => v,
