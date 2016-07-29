@@ -1,3 +1,4 @@
+/*
 #[macro_export]
 macro_rules! unpack_field {
     ($state:ident, Index ( $idx:expr )) => {
@@ -13,6 +14,7 @@ macro_rules! unpack_field {
         $state.get_field($pos, $idx);
     };
 }
+*/
 
 #[macro_export]
 macro_rules! auto_cleanup {
@@ -25,6 +27,7 @@ macro_rules! auto_cleanup {
     }};
 }
 
+/*
 #[macro_export]
 macro_rules! ipairs {
     ($state:ident, $b:block) => {{
@@ -43,7 +46,9 @@ macro_rules! ipairs {
         }
     }};
 }
+*/
 
+/*
 /// ```rust
 /// ensure_types!(state, is_number, is_bool, is_fn);
 /// ```
@@ -62,7 +67,9 @@ macro_rules! ensure_table {
         }
     };
 }
+*/
 
+/*
 /// ```rust
 /// convert_table!(state, Index(1): String, Field("value"): Number);
 /// ```
@@ -85,6 +92,7 @@ macro_rules! convert_table {
         })
     }};
 }
+*/
 
 /// ```rust
 /// convert_arguments!(state, Number, String);
@@ -93,31 +101,27 @@ macro_rules! convert_table {
 macro_rules! convert_arguments {
     ($state:ident, $($from:ty),+) => {{
         let names = [$(stringify!($from),)+];
+        let quantity = names.len() as Index;
         auto_cleanup!($state, {
-            let top = $state.get_top() - names.len() as Index;
-            if top < 0 {
-                let no_position = $state.get_top() + 1;
-                let msg = format!("{} argument(s) expected", names.len());
-                $state.arg_error(no_position, &msg);
-            }
-            let mut position = 0;
-            let result = ($({
-                position += 1;
-                let opt = {
-                    $state.to_type(top + position)
-                        .map(|v: $from| v)
-                };
-                match opt {
-                    Some(v) => v,
-                    None => {
-                        let msg = format!(
-                            "Can't convert value {}",
-                            names[(position - 1) as usize]);
-                        $state.arg_error(position, &msg);
-                    },
+            let mut collect = || {
+                let top = $state.get_top() - quantity;
+                if top < 0 {
+                    return Err(quantity + top);
                 }
-            },)+);
-            result
+                let mut position = 0;
+                let result = ($({
+                    position += 1;
+                    let opt = $state.to_type(top + position).map(|v: $from| v);
+                    match opt {
+                        Some(v) => v,
+                        None => {
+                            return Err(position);
+                        },
+                    }
+                },)+);
+                Ok(result)
+            };
+            collect()
         })
     }};
 }
