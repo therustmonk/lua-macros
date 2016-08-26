@@ -21,8 +21,7 @@ macro_rules! auto_cleanup {
     ($state:ident, $b:block) => {{
         let top = $state.get_top();
         let result = $b;
-        let new_top = $state.get_top();
-        $state.pop(new_top - top);
+        $state.set_top(top);
         result
     }};
 }
@@ -106,12 +105,12 @@ macro_rules! convert_arguments {
             let mut collect = || {
                 let top = $state.get_top() - quantity;
                 if top < 0 {
-                    return Err(quantity + top);
+                    return Err(quantity + top + 1);
                 }
                 let mut position = 0;
                 let result = ($({
                     position += 1;
-                    let opt = $state.to_type(top + position).map(|v: $from| v);
+                    let opt = $state.to_type::<$from>(top + position);
                     match opt {
                         Some(v) => v,
                         None => {
