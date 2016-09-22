@@ -43,6 +43,31 @@ macro_rules! convert_arguments {
     }};
 }
 
+#[macro_export]
+macro_rules! lua_map_table {
+    ($name:ident < $key:ty , $val:ty >) => {
+        struct $name(HashMap<$key, $val>);
+
+        impl FromLua for $name {
+            fn from_lua(state: &mut State, index: Index) -> Option<Self> {
+                let mut map = HashMap::new();
+                let index = state.abs_index(index);
+                state.push_nil();
+                while state.next(index) {
+                    if let Ok((name, value)) = convert_arguments!(state, $key, $val) {
+                        map.insert(name, value);
+                        state.pop(1); // Pop `key` only
+                    } else {
+                        state.pop(2); // Pop `key` and `value`, because `next` call returned `true`
+                        return None;
+                    }
+                }
+                Some($name(map))
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
