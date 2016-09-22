@@ -68,6 +68,45 @@ macro_rules! lua_map_table {
     };
 }
 
+#[macro_export]
+macro_rules! lua_userdata {
+    ($ud:ident $(, $field:expr => $func:ident )*) => {
+        impl $ud {
+            fn meta_name() -> &'static str {
+                concat!(stringify!($ud), ".Rust")
+            }
+
+            fn attach(state: &mut State) {
+                let created = state.new_metatable($ud::meta_name());
+                $(
+                state.push_fn(Some($func));
+                state.set_field(-2, $field);
+                )*
+                state.pop(1); // pop metatable
+                if !created {
+                    panic!("Metatable '{}' already exists.", $ud::meta_name());
+                }
+            }
+        }
+
+        impl FromLua for $ud {
+            fn from_lua(state: &mut State, index: Index) -> Option<Self> {
+                unsafe {
+                    state.test_userdata_typed::<$ud>(index, $ud::meta_name())
+                        .map(|p| p.clone())
+                }
+            }
+        }
+
+        impl ToLua for $ud {
+            fn to_lua(&self, state: &mut State) {
+                unsafe { *state.new_userdata_typed() = self.clone(); }
+                state.set_metatable_from_registry($ud::meta_name());
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
