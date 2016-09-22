@@ -15,20 +15,26 @@ macro_rules! auto_cleanup {
 /// ```
 #[macro_export]
 macro_rules! convert_arguments {
-    ($state:ident, $($from:ty),+) => {{
+    ($state:ident, $($from:ty),+) =>
+        (convert_arguments!(STRICT true, $state, $($from),+));
+    (STRICT $strict:expr, $state:ident, $($from:ty),+) => {{
         use $crate::lua::Index;
         let names = [$(stringify!($from),)+];
         let quantity = names.len() as Index;
+        let top = $state.get_top();
         auto_cleanup!($state, {
             let mut collect = || {
-                let top = $state.get_top() - quantity;
-                if top < 0 {
-                    return Err(quantity + top + 1);
+                let base = $state.get_top() - quantity;
+                if base < 0 {
+                    return Err(top + 1); // +1 because next arg expected
+                }
+                if $strict && base > 0 {
+                    return Err(top);
                 }
                 let mut position = 0;
                 let result = ($({
                     position += 1;
-                    let opt = $state.to_type::<$from>(top + position);
+                    let opt = $state.to_type::<$from>(base + position);
                     match opt {
                         Some(v) => v,
                         None => {
@@ -54,7 +60,8 @@ macro_rules! lua_map_table {
                 let index = state.abs_index(index);
                 state.push_nil();
                 while state.next(index) {
-                    if let Ok((name, value)) = convert_arguments!(state, $key, $val) {
+                    // Non-strict, because this macro pushes to stack additional values
+                    if let Ok((name, value)) = convert_arguments!(STRICT false, state, $key, $val) {
                         map.insert(name, value);
                         state.pop(1); // Pop `key` only
                     } else {
