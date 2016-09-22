@@ -15,9 +15,7 @@ macro_rules! auto_cleanup {
 /// ```
 #[macro_export]
 macro_rules! convert_arguments {
-    ($state:ident, $($from:ty),+) =>
-        (convert_arguments!(STRICT true, $state, $($from),+));
-    (STRICT $strict:expr, $state:ident, $($from:ty),+) => {{
+    (STRICT $strict:expr, $state:ident, $($from:tt),+) => {{
         use $crate::lua::Index;
         let names = [$(stringify!($from),)+];
         let quantity = names.len() as Index;
@@ -34,19 +32,25 @@ macro_rules! convert_arguments {
                 let mut position = 0;
                 let result = ($({
                     position += 1;
-                    let opt = $state.to_type::<$from>(base + position);
-                    match opt {
-                        Some(v) => v,
-                        None => {
-                            return Err(position);
-                        },
-                    }
+                    convert_arguments!(UNPACK $from, $state, base, position)
                 },)+);
                 Ok(result)
             };
             collect()
         })
     }};
+    (UNPACK _, $state:ident, $base:expr, $position:expr) => {()};
+    (UNPACK $from:ty, $state:ident, $base:expr, $position:expr) => {{
+        let opt = $state.to_type::<$from>($base + $position);
+        match opt {
+            Some(v) => v,
+            None => {
+                return Err($position);
+            },
+        }
+    }};
+    ($state:ident, $($from:tt),+) =>
+        (convert_arguments!(STRICT true, $state, $($from),+));
 }
 
 #[macro_export]
