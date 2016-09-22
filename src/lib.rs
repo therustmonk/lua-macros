@@ -1,3 +1,5 @@
+pub extern crate lua;
+
 /*
 #[macro_export]
 macro_rules! unpack_field {
@@ -99,6 +101,7 @@ macro_rules! convert_table {
 #[macro_export]
 macro_rules! convert_arguments {
     ($state:ident, $($from:ty),+) => {{
+        use $crate::lua::Index;
         let names = [$(stringify!($from),)+];
         let quantity = names.len() as Index;
         auto_cleanup!($state, {
