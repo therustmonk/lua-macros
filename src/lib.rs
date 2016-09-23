@@ -2,9 +2,7 @@
 //!
 //! ## Clean up the stack for scope
 //!
-//! Use `auto_cleanup` to revert top of stack to size before scope.
-//!
-//! Usage:
+//! Use `auto_cleanup` to revert top of stack to size before scope:
 //!
 //! ```rust
 //! # #[macro_use]
@@ -30,9 +28,7 @@
 //! ## Convert arguuments from lua
 //!
 //! Library has macro `convert_arguments` to convert arguments for
-//! any types which implemented `FromLua` trait.
-//!
-//! Usage:
+//! any types which implemented `FromLua` trait:
 //!
 //! ```rust
 //! # #[macro_use]
@@ -86,11 +82,9 @@
 //! }
 //! ```
 //!
-//! ## Read HashMap from Lua's table
+//! ## Read `HashMap` from Lua's table
 //!
-//! Macro `lua_map_table` helps you to unpack strictly typed table.
-//!
-//! Usage:
+//! Macro `lua_table_type` creates wrapper type to unpack tables:
 //!
 //! ```rust
 //! # #[macro_use]
@@ -109,18 +103,35 @@
 //! }
 //! ```
 //!
-//! ## Adds own userdata
+//! ## Read `Vec` from Lua's array
 //!
-//! Macro `lua_userdata` implements userdata features for type.
-//!
-//! Usage:
+//! Macro `lua_array_type` creates wrapper type to unpack arrays:
 //!
 //! ```rust
 //! # #[macro_use]
 //! # extern crate lua_macros;
 //! # use lua_macros::lua::{State, Integer};
 //!
-//! #[derive(Clone)]
+//! lua_array_type!(UserArray<Integer>);
+//!
+//! fn main() {
+//!     let mut state = State::new();
+//!     state.do_string("return {1, 2, 3}");
+//!     let UserArray(array) = state.to_type(-1).unwrap();
+//!     assert_eq!(array[0], 1);
+//! }
+//! ```
+//!
+//! ## Adds own userdata
+//!
+//! Macro `lua_userdata` implements userdata features for type:
+//!
+//! ```rust
+//! # #[macro_use]
+//! # extern crate lua_macros;
+//! # use lua_macros::lua::{State, Integer};
+//!
+//! # #[derive(Clone, Debug, PartialEq)]
 //! enum UserEnum {
 //!   One,
 //!   Two,
@@ -135,12 +146,20 @@
 //!
 //!     let ud = UserEnum::One;
 //!     state.push(ud);
+//!     state.push_nil();
+//!
+//!     let restored = state.to_type::<UserEnum>(-2).unwrap();
+//!     let wrong = state.to_type::<UserEnum>(-1);
+//!
+//!     assert_eq!(restored, UserEnum::One);
+//!     assert!(wrong.is_none());
 //! }
 //! ```
 
 
 pub extern crate lua;
 
+/// Clean up stack for the scope.
 #[macro_export]
 macro_rules! auto_cleanup {
     ($state:ident, $b:block) => {{
@@ -151,6 +170,7 @@ macro_rules! auto_cleanup {
     }};
 }
 
+/// Convert arguments using `FromLua` trait.
 #[macro_export]
 macro_rules! convert_arguments {
     (@strict $strict:expr, $state:ident, $($from:tt),+) => {{
@@ -191,6 +211,8 @@ macro_rules! convert_arguments {
         (convert_arguments!(@strict true, $state, $($from),+));
 }
 
+/// Makes wrapper to read table to hash map.
+///
 /// This macro add wrapper struct, because impossible to implement `FromLua` to `HashMap`
 /// because they are from other crates.
 #[macro_export]
@@ -219,8 +241,37 @@ macro_rules! lua_table_type {
     };
 }
 
-// TODO lua_array_type
+/// Makes wrapper to read table to array.
+#[macro_export]
+macro_rules! lua_array_type {
+    ($name:ident < $val:ty >) => {
+        struct $name(std::vec::Vec<$val>);
 
+        impl $crate::lua::FromLua for $name {
+            fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
+                let mut vec = std::vec::Vec::new();
+                let index = state.abs_index(index);
+                for idx in 1.. {
+                    state.geti(index, idx);
+                    if state.is_nil(-1) {
+                        state.pop(1);
+                        break;
+                    }
+                    if let Ok((value,)) = convert_arguments!(@strict false, state, $val) {
+                        vec.push(value);
+                        state.pop(1);
+                    } else {
+                        state.pop(1);
+                        return None;
+                    }
+                }
+                Some($name(vec))
+            }
+        }
+    };
+}
+
+/// Add userdata's methods to user's type.
 #[macro_export]
 macro_rules! lua_userdata {
     ($ud:ident $(, $field:expr => $func:ident )*) => {
