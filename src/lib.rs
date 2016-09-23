@@ -218,11 +218,11 @@ macro_rules! convert_arguments {
 #[macro_export]
 macro_rules! lua_table_type {
     ($name:ident < $key:ty , $val:ty >) => {
-        struct $name(std::collections::HashMap<$key, $val>);
+        struct $name(::std::collections::HashMap<$key, $val>);
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
-                let mut map = std::collections::HashMap::new();
+                let mut map = ::std::collections::HashMap::new();
                 let index = state.abs_index(index);
                 state.push_nil();
                 while state.next(index) {
@@ -245,11 +245,11 @@ macro_rules! lua_table_type {
 #[macro_export]
 macro_rules! lua_array_type {
     ($name:ident < $val:ty >) => {
-        struct $name(std::vec::Vec<$val>);
+        struct $name(::std::vec::Vec<$val>);
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
-                let mut vec = std::vec::Vec::new();
+                let mut vec = ::std::vec::Vec::new();
                 let index = state.abs_index(index);
                 for idx in 1.. {
                     state.geti(index, idx);
