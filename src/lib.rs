@@ -222,6 +222,9 @@ macro_rules! lua_table_type {
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
+                if !state.is_table(index) {
+                    return None;
+                }
                 let mut map = ::std::collections::HashMap::new();
                 let index = state.abs_index(index);
                 state.push_nil();
@@ -249,6 +252,9 @@ macro_rules! lua_array_type {
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
+                if !state.is_table(index) {
+                    return None;
+                }
                 let mut vec = ::std::vec::Vec::new();
                 let index = state.abs_index(index);
                 for idx in 1.. {
