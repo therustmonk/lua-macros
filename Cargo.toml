@@ -4,4 +4,4 @@ version = "0.1.5"
 authors = ["Denis Kolodin <deniskolodin@gmail.com>"]
 
 [dependencies]
-lua = { path = "../rust-lua53" }
+lua = { git = "https://github.com/jcmoyer/rust-lua53" }
