@@ -282,11 +282,11 @@ macro_rules! lua_array_type {
 macro_rules! lua_userdata {
     ($ud:ident $(, $field:expr => $func:ident )*) => {
         impl $ud {
-            fn meta_name() -> &'static str {
+            pub fn meta_name() -> &'static str {
                 concat!(stringify!($ud), ".Rust")
             }
 
-            fn attach(state: &mut State) {
+            pub fn attach(state: &mut State) {
                 let created = state.new_metatable($ud::meta_name());
                 $(
                 state.push_fn(Some($func));
