@@ -218,7 +218,7 @@ macro_rules! convert_arguments {
 #[macro_export]
 macro_rules! lua_table_type {
     ($name:ident < $key:ty , $val:ty >) => {
-        struct $name(::std::collections::HashMap<$key, $val>);
+        pub struct $name(pub ::std::collections::HashMap<$key, $val>);
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
@@ -248,7 +248,7 @@ macro_rules! lua_table_type {
 #[macro_export]
 macro_rules! lua_array_type {
     ($name:ident < $val:ty >) => {
-        struct $name(::std::vec::Vec<$val>);
+        pub struct $name(pub ::std::vec::Vec<$val>);
 
         impl $crate::lua::FromLua for $name {
             fn from_lua(state: &mut $crate::lua::State, index: $crate::lua::Index) -> Option<Self> {
