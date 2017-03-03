@@ -277,12 +277,13 @@ macro_rules! lua_array_type {
 
         impl $crate::lua::ToLua for $name {
             fn to_lua(&self, state: &mut $crate::lua::State) {
+                use $crate::lua::ToLua;
                 let $name(ref vec) = *self;
                 state.new_table();
                 let mut idx = 0;
                 for item in vec {
                     idx += 1; // Starts from 1 too
-                    state.push(item.to_owned());
+                    item.to_lua(state);
                     state.raw_seti(-2, idx);
                 }
             }
