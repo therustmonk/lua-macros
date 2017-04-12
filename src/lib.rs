@@ -305,10 +305,21 @@ macro_rules! lua_userdata {
                 state.push_fn(Some($func));
                 state.set_field(-2, $field);
                 )*
+                state.push_fn(Some($ud::drop_it));
+                state.set_field(-2, "__gc");
                 state.pop(1); // pop metatable
                 if !created {
                     panic!("Metatable '{}' already exists.", $ud::meta_name());
                 }
+            }
+
+            // TODO This is not tested, because right __gc signature not described in Lua doc
+            unsafe extern "C" fn drop_it(state: *mut $crate::lua::ffi::lua_State) -> i32 {
+                let mut state = $crate::lua::State::from_ptr(state);
+                if let Some(ptr) = state.to_userdata_typed::<$ud>(-1) {
+                    ::std::ptr::drop_in_place(ptr);
+                }
+                0
             }
         }
 
@@ -323,7 +334,11 @@ macro_rules! lua_userdata {
 
         impl $crate::lua::ToLua for $ud {
             fn to_lua(&self, state: &mut $crate::lua::State) {
-                unsafe { *state.new_userdata_typed() = self.clone(); }
+                unsafe {
+                    let pointer = state.new_userdata_typed();
+                    let uninit = ::std::ptr::replace(pointer, self.clone());
+                    ::std::mem::forget(uninit);
+                }
                 state.set_metatable_from_registry($ud::meta_name());
             }
         }
